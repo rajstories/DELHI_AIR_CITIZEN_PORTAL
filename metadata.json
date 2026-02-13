@@ -1,0 +1,9 @@
+{
+  "name": "Delhi Air Quality - Citizen Portal",
+  "description": "A government-grade, mobile-first progressive web app for real-time Delhi pollution monitoring with a clean, trust-building design system.",
+  "requestFramePermissions": [
+    "geolocation",
+    "camera",
+    "microphone"
+  ]
+}
