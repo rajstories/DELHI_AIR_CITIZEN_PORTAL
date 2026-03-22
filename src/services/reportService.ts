@@ -168,24 +168,16 @@ export async function uploadPhoto(
     // Dynamic import — keeps the bundle lean and avoids crashing if storage
     // bucket isn't configured (common during local dev without env vars).
     const { storage } = await import('./firebaseConfig');
-    const { ref: storageRef, uploadBytesResumable, getDownloadURL } = await import('firebase/storage');
+    const { ref: storageRef, uploadBytes, getDownloadURL } = await import('firebase/storage');
 
     const path    = `reports/${citizenId}/${reportId}.jpg`;
     const fileRef = storageRef(storage, path);
 
-    // uploadBytesResumable gives us progress tracking
-    await new Promise<void>((resolve, reject) => {
-      const task = uploadBytesResumable(fileRef, processedFile, { contentType: 'image/jpeg' });
-      task.on(
-        'state_changed',
-        (snap) => {
-          const pct = Math.round((snap.bytesTransferred / snap.totalBytes) * 100);
-          console.log(`[reportService] Upload: ${pct}%`);
-        },
-        reject,
-        resolve,
-      );
-    });
+    // using uploadBytes with a timeout so a bad config doesn't hang the app infinitely
+    await Promise.race([
+      uploadBytes(fileRef, processedFile, { contentType: 'image/jpeg' }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Upload timeout (8s)')), 8000))
+    ]);
 
     const url = await getDownloadURL(fileRef);
     console.log('[reportService] ✅ Photo uploaded:', url);

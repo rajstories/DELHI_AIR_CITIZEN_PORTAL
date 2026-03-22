@@ -98,8 +98,9 @@ export const GreenLensCamera: React.FC<GreenLensCameraProps> = ({ onClose, onSub
   }, []);
 
   // ── Auto GPS + DigiPin on mount ─────────────────────────────────────────────
-  useEffect(() => {
+  const requestGps = useCallback(() => {
     if (!navigator.geolocation) { setGpsStatus('unavailable'); return; }
+    setGpsStatus('loading');
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const coords: GpsCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
@@ -116,6 +117,10 @@ export const GreenLensCamera: React.FC<GreenLensCameraProps> = ({ onClose, onSub
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
     );
   }, []);
+
+  useEffect(() => {
+    requestGps();
+  }, [requestGps]);
 
   // ── Run EXIF + analysis once a file is captured ────────────────────────────
   const runAnalysis = useCallback(async (file: File) => {
@@ -303,9 +308,12 @@ export const GreenLensCamera: React.FC<GreenLensCameraProps> = ({ onClose, onSub
       </span>
     );
     return (
-      <span className="flex items-center gap-1 text-xs text-orange-500">
-        <AlertCircle size={10} /> Location unavailable
-      </span>
+      <button 
+        onClick={requestGps}
+        className="flex items-center gap-1.5 text-xs text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded-full hover:bg-orange-500/20 transition-colors font-medium cursor-pointer"
+      >
+        <AlertCircle size={12} /> Location access denied. Tap to retry
+      </button>
     );
   };
 
