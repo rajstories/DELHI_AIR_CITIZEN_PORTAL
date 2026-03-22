@@ -104,10 +104,34 @@ export type TimeRange = '24H' | '7D' | '30D';
 
 export type AlertFilter = 'all' | 'critical' | 'warning' | 'info';
 
-export type Page = 'home' | 'alerts' | 'history' | 'leaderboard' | 'actions';
+export type Page = 'home' | 'alerts' | 'history' | 'leaderboard' | 'actions' | 'myreports';
 
 export interface NavItem {
   id: Page;
   label: string;
   icon: any; // Lucide icon component type
+}
+
+export interface ProgressUpdate {
+  time: number;
+  status: string;
+}
+
+export interface ReportData {
+  reportId: string;
+  status: 'verified' | 'flagged' | 'rejected' | 'open' | 'in_progress' | 'resolved' | string;
+  trustScore: number;
+  issueType: string;
+  title: string;
+  description: string;
+  severity: string;
+  timestamp: number;
+  photoUrl: string;
+  location: {
+    submittedLat: number | null;
+    submittedLng: number | null;
+    address: string;
+    digiPin: string | null;
+  };
+  progressUpdates: ProgressUpdate[];
 }

@@ -1,7 +1,12 @@
 import React from 'react';
-import { Home, Bell, BarChart2, Trophy, Camera } from 'lucide-react';
+import { Home, Bell, BarChart2, Trophy, Camera, ClipboardList } from 'lucide-react';
 import { Page, NavItem } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
+import { ref, onValue } from 'firebase/database';
+import { database } from '../src/services/firebaseConfig';
+import { getCitizenId } from '../src/utils/citizenUtils';
+import { getUnreadReportCount } from '../pages/MyReports';
+import type { ReportData } from '../types';
 
 interface BottomNavProps {
   currentPage: Page;
@@ -12,11 +17,25 @@ interface BottomNavProps {
 export const BottomNav: React.FC<BottomNavProps> = ({ currentPage, onNavigate, onScanClick }) => {
   const { t } = useLanguage();
 
+  const [unreadCount, setUnreadCount] = React.useState(0);
+
+  React.useEffect(() => {
+    const citizenId = getCitizenId();
+    const dbRef = ref(database, `citizen_reports/${citizenId}`);
+    const unsubscribe = onValue(dbRef, (snapshot) => {
+      const data = snapshot.val();
+      if (!data) { setUnreadCount(0); return; }
+      const arr = Object.values(data) as ReportData[];
+      setUnreadCount(getUnreadReportCount(arr));
+    });
+    return () => unsubscribe();
+  }, []);
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] z-40 pb-safe">
       <div className="max-w-[640px] mx-auto h-16 relative">
         
-        {/* Floating Button - Positioned absolutely relative to the container for z-index and overflow handling */}
+        {/* Floating Button - Center */}
         <div className="absolute left-1/2 -translate-x-1/2 -top-6 z-10 flex flex-col items-center">
             <button 
                 onClick={onScanClick}
@@ -29,9 +48,9 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentPage, onNavigate, o
             </span>
         </div>
 
-        {/* Navigation Grid - 5 Columns for perfect symmetry */}
-        <div className="grid grid-cols-5 h-full items-end pb-2">
-            <div className="flex justify-center">
+        {/* Navigation Grid - 5 items */}
+        <div className="flex h-full items-end pb-2 justify-between px-2">
+            <div className="flex-1 flex justify-center">
                 <NavButton 
                     id="home" 
                     label={t('nav.home')} 
@@ -40,7 +59,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentPage, onNavigate, o
                     onClick={() => onNavigate('home')} 
                 />
             </div>
-            <div className="flex justify-center">
+            <div className="flex-1 flex justify-center">
                 <NavButton 
                     id="alerts" 
                     label={t('nav.alerts')} 
@@ -51,18 +70,28 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentPage, onNavigate, o
             </div>
             
             {/* Spacer for Center Button */}
-            <div></div>
+            <div className="w-16 shrink-0"></div>
 
-            <div className="flex justify-center">
+            <div className="flex-1 flex justify-center">
+                <NavButton 
+                    id="myreports" 
+                    label="Reports" 
+                    icon={ClipboardList} 
+                    isActive={currentPage === 'myreports'} 
+                    onClick={() => onNavigate('myreports')} 
+                    badge={unreadCount > 0}
+                />
+            </div>
+            <div className="flex-1 flex justify-center">
                 <NavButton 
                     id="history" 
-                    label={t('nav.history')} 
+                    label="History" 
                     icon={BarChart2} 
                     isActive={currentPage === 'history'} 
                     onClick={() => onNavigate('history')} 
                 />
             </div>
-            <div className="flex justify-center">
+            <div className="flex-1 flex justify-center">
                 <NavButton 
                     id="leaderboard" 
                     label="Ranking" 
@@ -77,17 +106,20 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentPage, onNavigate, o
   );
 };
 
-const NavButton = ({ id, label, icon: Icon, isActive, onClick }: any) => (
+const NavButton = ({ id, label, icon: Icon, isActive, onClick, badge }: any) => (
     <button
         onClick={onClick}
-        className={`flex flex-col items-center justify-center space-y-1 transition-colors duration-200 ${
+        className={`flex flex-col items-center justify-center space-y-1 transition-colors duration-200 relative ${
         isActive ? 'text-gov-navy' : 'text-gray-400 hover:text-gray-600'
         }`}
     >
-        <div className={`p-1 rounded-xl transition-all ${isActive ? 'bg-blue-50' : 'bg-transparent'}`}>
+        <div className={`p-1 rounded-xl transition-all relative ${isActive ? 'bg-blue-50' : 'bg-transparent'}`}>
             <Icon size={22} strokeWidth={isActive ? 2.5 : 2} />
+            {badge && (
+              <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white" />
+            )}
         </div>
-        <span className={`text-[10px] font-medium ${isActive ? 'font-semibold' : ''}`}>
+        <span className={`text-[10px] whitespace-nowrap font-medium ${isActive ? 'font-semibold' : ''}`}>
             {label}
         </span>
     </button>

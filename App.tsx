@@ -13,6 +13,7 @@ import { LanguageProvider } from './contexts/LanguageContext';
 import { GreenLensCamera } from './components/GreenLensCamera';
 import { RewardModal } from './components/RewardModal';
 import { VayuMitraModal } from './components/VayuMitraModal';
+import MyReports from './pages/MyReports';
 import { AnimatePresence } from 'framer-motion';
 
 const AppContent: React.FC = () => {
@@ -27,7 +28,8 @@ const AppContent: React.FC = () => {
   const [showCamera, setShowCamera] = useState(false);
   const [showReward, setShowReward] = useState(false);
   const [userPoints, setUserPoints] = useState(1250); // Initial points
-  
+  const [lastTrustScore, setLastTrustScore] = useState<number | null>(null);
+
   // Vayu Mitra Chat State
   const [showChat, setShowChat] = useState(false);
 
@@ -52,11 +54,15 @@ const AppContent: React.FC = () => {
     setCurrentPage('actions');
   };
 
-  const handleScanSubmit = () => {
+  const handleScanSubmit = (trustScore?: number) => {
     setShowCamera(false);
+    // Award points scaled to trust score (demo: 50 base + bonus for high trust)
+    const bonus = trustScore !== undefined ? Math.floor(trustScore / 2) : 25;
+    setUserPoints(prev => prev + bonus);
+    setLastTrustScore(trustScore ?? null);
     setShowReward(true);
-    // Add points when verified
-    setUserPoints(prev => prev + 50);
+    // After a moment, navigate to My Reports so citizen can track their submission
+    setTimeout(() => setCurrentPage('history'), 3500);
   };
 
   const handleRedeem = () => {
@@ -79,6 +85,8 @@ const AppContent: React.FC = () => {
         return <ActionRecommendations data={activeAQIData} onBack={() => setCurrentPage('home')} />;
       case 'history':
         return <History />;
+      case 'myreports':
+        return <MyReports onScanClick={() => setShowCamera(true)} />;
       case 'leaderboard':
         // Pass dynamic points here
         return <WardRakshak userPoints={userPoints} />;
