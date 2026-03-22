@@ -33,73 +33,59 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentPage, onNavigate, o
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] z-40 pb-safe">
-      <div className="max-w-[640px] mx-auto h-16 relative">
+      <div className="max-w-[640px] mx-auto h-[72px] relative">
         
-        {/* Floating Button - Center */}
-        <div className="absolute left-1/2 -translate-x-1/2 -top-6 z-10 flex flex-col items-center">
+        {/* Floating Button - Centered ABOVE the navbar */}
+        <div className="absolute left-1/2 -translate-x-1/2 -top-[4.5rem] z-20 flex flex-col items-center">
             <button 
                 onClick={onScanClick}
-                className="w-16 h-16 rounded-full bg-gradient-to-tr from-green-600 to-yellow-400 shadow-[0_4px_15px_rgba(34,197,94,0.4)] flex items-center justify-center text-white border-4 border-white transition-transform active:scale-95"
+                className="w-[68px] h-[68px] rounded-full bg-gradient-to-tr from-green-600 to-yellow-400 shadow-[0_8px_20px_rgba(34,197,94,0.4)] flex items-center justify-center text-white border-[5px] border-white transition-transform hover:scale-105 active:scale-95"
             >
-                <Camera size={28} />
+                <Camera size={30} />
             </button>
-            <span className="text-[10px] font-bold text-green-700 whitespace-nowrap bg-green-50 px-2 py-0.5 rounded-full shadow-sm mt-1">
+            <span className="text-[11px] font-extrabold tracking-wide text-green-800 whitespace-nowrap bg-white/95 backdrop-blur-sm px-3 py-1 rounded-full shadow-md mt-1 border border-green-100">
                 {t('nav.snap')}
             </span>
         </div>
 
-        {/* Navigation Grid - 5 items */}
-        <div className="flex h-full items-end pb-2 justify-between px-2">
-            <div className="flex-1 flex justify-center">
-                <NavButton 
-                    id="home" 
-                    label={t('nav.home')} 
-                    icon={Home} 
-                    isActive={currentPage === 'home'} 
-                    onClick={() => onNavigate('home')} 
-                />
-            </div>
-            <div className="flex-1 flex justify-center">
-                <NavButton 
-                    id="alerts" 
-                    label={t('nav.alerts')} 
-                    icon={Bell} 
-                    isActive={currentPage === 'alerts'} 
-                    onClick={() => onNavigate('alerts')} 
-                />
-            </div>
-            
-            {/* Spacer for Center Button */}
-            <div className="w-16 shrink-0"></div>
-
-            <div className="flex-1 flex justify-center">
-                <NavButton 
-                    id="myreports" 
-                    label="Reports" 
-                    icon={ClipboardList} 
-                    isActive={currentPage === 'myreports'} 
-                    onClick={() => onNavigate('myreports')} 
-                    badge={unreadCount > 0}
-                />
-            </div>
-            <div className="flex-1 flex justify-center">
-                <NavButton 
-                    id="history" 
-                    label="History" 
-                    icon={BarChart2} 
-                    isActive={currentPage === 'history'} 
-                    onClick={() => onNavigate('history')} 
-                />
-            </div>
-            <div className="flex-1 flex justify-center">
-                <NavButton 
-                    id="leaderboard" 
-                    label="Ranking" 
-                    icon={Trophy} 
-                    isActive={currentPage === 'leaderboard'} 
-                    onClick={() => onNavigate('leaderboard')} 
-                />
-            </div>
+        {/* Navigation Grid - 5 evenly spaced items */}
+        <div className="grid grid-cols-5 h-full items-end pb-2 justify-items-center px-1">
+            <NavButton 
+                id="home" 
+                label={t('nav.home')} 
+                icon={Home} 
+                isActive={currentPage === 'home'} 
+                onClick={() => onNavigate('home')} 
+            />
+            <NavButton 
+                id="alerts" 
+                label={t('nav.alerts')} 
+                icon={Bell} 
+                isActive={currentPage === 'alerts'} 
+                onClick={() => onNavigate('alerts')} 
+            />
+            <NavButton 
+                id="myreports" 
+                label="Reports" 
+                icon={ClipboardList} 
+                isActive={currentPage === 'myreports'} 
+                onClick={() => onNavigate('myreports')} 
+                badge={unreadCount > 0}
+            />
+            <NavButton 
+                id="history" 
+                label="History" 
+                icon={BarChart2} 
+                isActive={currentPage === 'history'} 
+                onClick={() => onNavigate('history')} 
+            />
+            <NavButton 
+                id="leaderboard" 
+                label="Ranking" 
+                icon={Trophy} 
+                isActive={currentPage === 'leaderboard'} 
+                onClick={() => onNavigate('leaderboard')} 
+            />
         </div>
       </div>
     </nav>
