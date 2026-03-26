@@ -25,7 +25,7 @@ export function broadcastToDashboard(message: WSMessage): void {
 
   const data = JSON.stringify(message);
   
-  wsServer.clients.forEach((client) => {
+  wsServer.clients.forEach((client: any) => {
     if (client.readyState === 1) {
       client.send(data);
     }
