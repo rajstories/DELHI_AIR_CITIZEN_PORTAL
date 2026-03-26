@@ -6,9 +6,10 @@ import { Card } from '../components/Card';
 import { SuperAlertCard } from '../components/SuperAlertCard';
 import { GreenLensCamera } from '../components/GreenLensCamera';
 import { RewardModal } from '../components/RewardModal';
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 
 export const Alerts: React.FC = () => {
+  console.log("ALERTS COMPONENT RENDERING...");
   const [filter, setFilter] = useState<AlertFilter>('all');
   const [alerts, setAlerts] = useState<Alert[]>(MOCK_ALERTS);
   const [showSettings, setShowSettings] = useState(false);
@@ -23,6 +24,7 @@ export const Alerts: React.FC = () => {
     { id: '2', reportId: 'RPT-002', title: 'Report on construction dust', action: '⏳ Under review by DPCC', time: '3h ago', status: 'in-progress', points: 0 },
     { id: '3', reportId: 'RPT-003', title: 'Smoke emission from factory', action: '✓ Warning issued to facility', time: '1d ago', status: 'completed', points: 25 },
   ]);
+  const [selectedAction, setSelectedAction] = useState<typeof govtActions[0] | null>(null);
 
   // Settings Form State
   const [settings, setSettings] = useState({
@@ -50,6 +52,11 @@ export const Alerts: React.FC = () => {
   const handleReportClick = () => setShowCamera(true);
   const handleScanSubmit = () => { setShowCamera(false); setShowReward(true); };
   const handleRedeem = () => { setShowReward(false); alert("Points Added!"); };
+
+  const onTabClick = (f: AlertFilter) => {
+      console.log("TAB CLICKED:", f);
+      setFilter(f);
+  };
 
   return (
     <div className="min-h-full pb-24 relative bg-gray-50">
@@ -81,10 +88,10 @@ export const Alerts: React.FC = () => {
 
            {/* TABS */}
            <div className="flex px-4 space-x-4 overflow-x-auto no-scrollbar pb-0">
-               <TabButton label="All" active={filter === 'all'} onClick={() => setFilter('all')} />
-               <TabButton label="Critical" active={filter === 'critical'} onClick={() => setFilter('critical')} />
-               <TabButton label="Warnings" active={filter === 'warning'} onClick={() => setFilter('warning')} />
-               <TabButton label="Updates" active={filter === 'info'} onClick={() => setFilter('info')} />
+               <TabButton label="All" active={filter === 'all'} onClick={() => onTabClick('all')} />
+               <TabButton label="Critical" active={filter === 'critical'} onClick={() => onTabClick('critical')} />
+               <TabButton label="Warnings" active={filter === 'warning'} onClick={() => onTabClick('warning')} />
+               <TabButton label="Updates" active={filter === 'info'} onClick={() => onTabClick('info')} />
            </div>
        </div>
 
@@ -95,7 +102,9 @@ export const Alerts: React.FC = () => {
                <div className="space-y-2 mb-6">
                    <h2 className="text-xs font-bold text-gray-600 uppercase tracking-wider px-2">Government Action Updates</h2>
                    {govtActions.map(action => (
-                       <div key={action.id} className={`rounded-lg p-4 border-2 flex items-start gap-4 transform transition-all hover:scale-[1.02] cursor-pointer shadow-sm ${
+                       <div key={action.id} 
+                           onClick={() => { console.log("GOVT ACTION CLICKED:", action.id); setSelectedAction(action); }}
+                           className={`rounded-lg p-4 border-2 flex items-start gap-4 transform transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer shadow-sm ${
                            action.status === 'completed' 
                                ? 'bg-green-50 border-green-200' 
                                : 'bg-blue-50 border-blue-200'
@@ -108,12 +117,12 @@ export const Alerts: React.FC = () => {
                                <CheckCircle size={20} />
                            </div>
                            <div className="flex-1 min-w-0">
-                               <p className="text-sm font-bold text-gray-900">{action.title}</p>
-                               <p className="text-xs text-gray-600 mt-1">{action.action}</p>
+                               <p className="text-sm font-bold text-gray-900 leading-tight">{action.title}</p>
+                               <p className="text-xs text-gray-600 mt-1 font-medium">{action.action}</p>
                                <div className="flex items-center justify-between mt-2">
                                    <span className="text-[11px] text-gray-500">{action.time}</span>
                                    {action.points > 0 && (
-                                       <span className="inline-flex items-center gap-1 bg-yellow-100 text-yellow-700 text-[10px] font-bold px-2 py-1 rounded-full">
+                                       <span className="inline-flex items-center gap-1 bg-yellow-100 text-yellow-700 text-[10px] font-bold px-2 py-1 rounded-full border border-yellow-200">
                                            <Award size={12} /> +{action.points} pts
                                        </span>
                                    )}
@@ -160,7 +169,7 @@ export const Alerts: React.FC = () => {
        
        {/* SETTINGS MODAL */}
        {showSettings && (
-           <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+           <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
                <div className="bg-white w-full max-w-[640px] sm:rounded-2xl rounded-t-2xl shadow-2xl max-h-[90vh] overflow-y-auto animate-in slide-in-from-bottom duration-300">
                    <div className="p-4 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white">
                        <h2 className="font-bold text-lg text-gov-navy">Alert Preferences</h2>
@@ -196,7 +205,7 @@ export const Alerts: React.FC = () => {
                        <div className="pt-4">
                            <button 
                              onClick={() => setShowSettings(false)}
-                             className="w-full bg-gov-navy text-white font-bold py-3 rounded-xl hover:bg-opacity-90"
+                             className="w-full bg-gov-navy text-white font-bold py-3 rounded-xl hover:bg-opacity-90 transition-colors"
                            >
                                Save Preferences
                            </button>
@@ -205,6 +214,85 @@ export const Alerts: React.FC = () => {
                </div>
            </div>
        )}
+
+       {/* GOVT ACTION DETAIL MODAL */}
+       <AnimatePresence>
+           {selectedAction && (
+               <div 
+                 className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+                 onClick={() => setSelectedAction(null)}
+               >
+                   <motion.div 
+                       initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                       animate={{ opacity: 1, scale: 1, y: 0 }}
+                       exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                       className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden"
+                       onClick={(e) => e.stopPropagation()}
+                   >
+                       <div className={`p-6 ${selectedAction.status === 'completed' ? 'bg-green-600' : 'bg-blue-600'} text-white relative`}>
+                           <button 
+                               onClick={() => setSelectedAction(null)}
+                               className="absolute top-4 right-4 p-1.5 bg-black/20 rounded-full hover:bg-black/30 transition-colors"
+                           >
+                               <X size={18} />
+                           </button>
+                           <div className="flex items-center gap-3 mb-2">
+                               <div className="bg-white/20 p-2 rounded-full">
+                                   <CheckCircle size={24} />
+                               </div>
+                               <span className="text-sm font-bold uppercase tracking-wider">Government Action Update</span>
+                           </div>
+                           <h3 className="text-xl font-bold leading-tight">{selectedAction.title}</h3>
+                       </div>
+                       
+                       <div className="p-6 space-y-4">
+                           <div className="flex items-center justify-between text-sm">
+                               <span className="text-gray-500">Report ID</span>
+                               <span className="font-mono font-bold text-gray-900">{selectedAction.reportId}</span>
+                           </div>
+                           <div className="flex items-center justify-between text-sm">
+                               <span className="text-gray-500">Time</span>
+                               <span className="text-gray-900">{selectedAction.time}</span>
+                           </div>
+                           <div className="flex items-center justify-between text-sm">
+                               <span className="text-gray-500">Status</span>
+                               <span className={`font-bold ${selectedAction.status === 'completed' ? 'text-green-600' : 'text-blue-600'}`}>
+                                   {selectedAction.status === 'completed' ? 'Action Completed' : 'Under Investigation'}
+                               </span>
+                           </div>
+
+                           <div className="pt-4 border-t border-gray-100">
+                               <p className="text-sm font-bold text-gray-900 mb-2">Detailed Response:</p>
+                               <p className="text-sm text-gray-600 leading-relaxed bg-gray-50 p-3 rounded-xl border border-gray-100">
+                                   {selectedAction.status === 'completed' 
+                                       ? `The relevant authorities have addressed this issue. ${selectedAction.action}. Thank you for being a vigilant citizen.` 
+                                       : `Your report is being reviewed. ${selectedAction.action}. We will notify you once action is taken.`}
+                                </p>
+                           </div>
+
+                           {selectedAction.points > 0 && (
+                               <div className="bg-yellow-50 border border-yellow-100 p-3 rounded-xl flex items-center gap-3">
+                                   <div className="bg-yellow-400 p-1.5 rounded-lg text-white">
+                                       <Award size={18} />
+                                   </div>
+                                   <div>
+                                       <p className="text-[11px] font-bold text-yellow-800 uppercase tracking-wide">Reward Earned</p>
+                                       <p className="text-sm font-bold text-yellow-900">+{selectedAction.points} Green Credits</p>
+                                   </div>
+                               </div>
+                           )}
+
+                           <button 
+                               onClick={() => setSelectedAction(null)}
+                               className="w-full mt-4 bg-gray-900 text-white font-bold py-4 rounded-xl active:scale-[0.98] transition-transform shadow-lg"
+                           >
+                               Close
+                           </button>
+                       </div>
+                   </motion.div>
+               </div>
+           )}
+       </AnimatePresence>
     </div>
   );
 };
@@ -217,8 +305,9 @@ interface TabButtonProps {
 
 const TabButton: React.FC<TabButtonProps> = ({ label, active, onClick }) => (
     <button 
-      onClick={onClick}
-      className={`pb-3 px-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${active ? 'border-gov-navy text-gov-navy' : 'border-transparent text-gray-500'}`}
+      onClick={(e) => { e.preventDefault(); console.log('BUTTON CLICKED:', label); onClick(); }}
+      type="button"
+      className={`pb-3 px-2 text-sm font-bold border-b-2 transition-colors whitespace-nowrap active:scale-95 ${active ? 'border-gov-navy text-gov-navy' : 'border-transparent text-gray-500'}`}
     >
         {label}
     </button>
@@ -243,8 +332,8 @@ interface ToggleProps {
 }
 
 const Toggle: React.FC<ToggleProps> = ({ label, checked, onChange }) => (
-    <label className="flex items-center justify-between cursor-pointer">
-        <span className="text-gray-700">{label}</span>
+    <label className="flex items-center justify-between cursor-pointer active:scale-[0.99] transition-transform">
+        <span className="text-gray-700 font-medium">{label}</span>
         <div className="relative">
             <input type="checkbox" className="sr-only" checked={checked} onChange={e => onChange(e.target.checked)} />
             <div className={`block w-12 h-7 rounded-full transition-colors ${checked ? 'bg-green-500' : 'bg-gray-300'}`}></div>
@@ -279,27 +368,26 @@ const AlertCard: React.FC<AlertCardProps> = ({ alert, onDismiss }) => {
 
     return (
         <div className="relative group touch-pan-x">
-             {/* SIMULATED SWIPE ACTION BACKGROUND (Visual only for now) */}
              <div className="absolute inset-y-0 right-0 bg-red-100 rounded-xl w-20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                  <Trash2 className="text-red-500" />
              </div>
 
             <Card className={`relative z-10 !border-l-4 ${getBorderColor()} transition-transform active:scale-[0.99]`}>
-                <div onClick={() => setExpanded(!expanded)} className="cursor-pointer">
+                <div onClick={() => { console.log('ALERT CARD CLICKED:', alert.id); setExpanded(!expanded); }} className="cursor-pointer">
                     <div className="flex justify-between items-start mb-2">
                         <div className="flex items-center gap-2">
-                            <span className={`text-xs font-bold uppercase px-2 py-0.5 rounded-full ${
+                            <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
                                 alert.type === 'critical' ? 'bg-red-100 text-red-700' : 
                                 alert.type === 'warning' ? 'bg-orange-100 text-orange-700' : 
                                 'bg-green-100 text-green-700'
                             }`}>
                                 {alert.type}
                             </span>
-                            <span className="text-xs text-gray-400">{alert.timestamp}</span>
+                            <span className="text-[10px] text-gray-400 font-bold">{alert.timestamp}</span>
                         </div>
                         <button 
                             onClick={(e) => { e.stopPropagation(); onDismiss(); }} 
-                            className="text-gray-300 hover:text-gray-500 p-1"
+                            className="text-gray-300 hover:text-gray-500 p-1 active:scale-90 transition-transform"
                             aria-label="Dismiss"
                         >
                             <X size={16} />
@@ -309,11 +397,10 @@ const AlertCard: React.FC<AlertCardProps> = ({ alert, onDismiss }) => {
                     <div className="flex gap-4">
                         <div className="mt-1 shrink-0">{getIcon()}</div>
                         <div>
-                            <h3 className="font-bold text-gray-900 leading-tight mb-1">{alert.title}</h3>
-                            <p className="text-xs text-gray-500 font-medium mb-2">{alert.location}</p>
-                            <p className="text-sm text-gray-800 leading-relaxed">{alert.message}</p>
+                            <h3 className="font-black text-gray-900 leading-tight mb-1 text-base">{alert.title}</h3>
+                            <p className="text-xs text-gray-500 font-bold mb-2">{alert.location}</p>
+                            <p className="text-sm text-gray-800 leading-relaxed font-medium">{alert.message}</p>
                             
-                            {/* EXPANDABLE CONTENT */}
                             <div className={`grid transition-all duration-300 ease-in-out ${expanded ? 'grid-rows-[1fr] opacity-100 mt-3' : 'grid-rows-[0fr] opacity-0'}`}>
                                 <div className="overflow-hidden">
                                     <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
@@ -328,7 +415,9 @@ const AlertCard: React.FC<AlertCardProps> = ({ alert, onDismiss }) => {
                             </div>
 
                             {!expanded && (
-                                <p className="text-xs text-blue-500 mt-2 font-medium">Tap to view details</p>
+                                <p className="text-[11px] text-blue-500 mt-2 font-bold flex items-center gap-1">
+                                    Tap to view details <ArrowRight size={10} />
+                                </p>
                             )}
                         </div>
                     </div>

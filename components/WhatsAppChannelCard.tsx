@@ -6,7 +6,10 @@ export const WhatsAppChannelCard: React.FC = () => {
   };
 
   return (
-    <div className="mx-1 bg-green-50 border border-green-200 rounded-2xl p-4 flex items-center gap-3 shadow-sm relative overflow-hidden">
+    <div 
+      onClick={handleJoin}
+      className="mx-1 bg-green-50 border border-green-200 rounded-2xl p-4 flex items-center gap-3 shadow-sm relative overflow-hidden cursor-pointer active:scale-[0.98] transition-all"
+    >
        {/* Decor bg */}
        <div className="absolute top-0 right-0 w-24 h-24 bg-green-100 rounded-full -mr-12 -mt-12 opacity-50 pointer-events-none"></div>
 
@@ -26,12 +29,11 @@ export const WhatsAppChannelCard: React.FC = () => {
       </div>
 
       {/* Button */}
-      <button 
-        onClick={handleJoin}
+      <div 
         className="bg-[#25D366] text-white text-xs font-bold px-3 py-2 rounded-lg shadow-sm hover:bg-green-600 active:scale-95 transition-all shrink-0 z-10"
       >
         Join Channel
-      </button>
+      </div>
     </div>
   );
 };

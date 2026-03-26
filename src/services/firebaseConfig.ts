@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getDatabase } from 'firebase/database';
 import { getStorage } from 'firebase/storage';
+import { getAuth, signInAnonymously } from 'firebase/auth';
 
 const firebaseConfig = {
   databaseURL: "https://delhi-citizen-app-default-rtdb.firebaseio.com",
@@ -12,4 +13,9 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const database = getDatabase(app);
 export const storage = getStorage(app);
+export const auth = getAuth(app);
+
+// Simple auto-sign-in for anonymous sessions
+signInAnonymously(auth).catch(e => console.error("Firebase auth error:", e));
+
 export default app;
