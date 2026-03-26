@@ -1,5 +1,6 @@
 {
   "rewrites": [
     { "source": "/api/v1/(.*)", "destination": "https://delhi-air-citizen-portal-1.onrender.com/api/v1/$1" }
-  ]
+  ],
+  "installCommand": "npm install --legacy-peer-deps"
 }
