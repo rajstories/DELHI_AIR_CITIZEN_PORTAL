@@ -20,9 +20,11 @@ export const RewardModal: React.FC<RewardModalProps> = ({
   status 
 }) => {
   const { t } = useLanguage();
+  const safePoints = pointsEarned ?? 0;
+  const safeStatus = status ?? 'rejected';
 
   useEffect(() => {
-    if (status === 'verified' && pointsEarned > 0) {
+    if (safeStatus === 'verified' && safePoints > 0) {
       const duration = 3 * 1000;
       const end = Date.now() + duration;
 
@@ -48,9 +50,9 @@ export const RewardModal: React.FC<RewardModalProps> = ({
       };
       frame();
     }
-  }, [status, pointsEarned]);
+  }, [safeStatus, safePoints]);
 
-  const isVerified = status === 'verified' && pointsEarned > 0;
+  const isVerified = safeStatus === 'verified' && safePoints > 0;
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
@@ -111,7 +113,7 @@ export const RewardModal: React.FC<RewardModalProps> = ({
                           <Zap size={24} fill="currentColor" />
                       </div>
                       <div className="text-left">
-                          <div className="text-2xl font-bold text-gray-900">+{pointsEarned}</div>
+                          <div className="text-2xl font-bold text-gray-900">+{safePoints}</div>
                           <div className="text-xs text-yellow-800 font-semibold uppercase">{t('greenlens.reward.added')}</div>
                       </div>
                   </div>
@@ -119,7 +121,7 @@ export const RewardModal: React.FC<RewardModalProps> = ({
                   <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-6">
                       <div className="text-lg font-bold text-gray-700">Pending Review</div>
                       <div className="text-xs text-gray-500 mt-1">
-                        {status === 'flagged' 
+                        {safeStatus === 'flagged' 
                           ? 'Your report is under review. You will earn points once verified by authorities.'
                           : 'Report submitted. No points earned.'
                         }

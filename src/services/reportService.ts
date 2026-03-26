@@ -1,6 +1,18 @@
 import { recordReportSubmission } from '../utils/citizenUtils';
 import type { VerificationResult } from './verificationService';
 
+export interface ReportPayload {
+  citizenId: string;
+  reportId: string;
+  timestamp: number;
+  status: string;
+  trustScore: number;
+  location: { submittedLat: number | null; submittedLng: number | null; exifLat: number | null; exifLng: number | null; digiPin: string | null; address: string; };
+  photo: { url: string; hasExif: boolean; cameraModel: string | null; captureTime: string | null; };
+  report: { issueType: string; description: string; severity: string; };
+  verification: any;
+}
+
 const LOCAL_REPORTS_KEY = 'dgp_citizen_reports';
 
 function getLocalReports(citizenId: string): any[] {
