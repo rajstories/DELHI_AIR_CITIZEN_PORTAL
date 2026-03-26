@@ -8,8 +8,8 @@ interface RewardModalProps {
   onClose: () => void;
   onRedeem: () => void;
   onScanAnother: () => void;
-  pointsEarned: number;
-  status: 'verified' | 'flagged' | 'rejected';
+  pointsEarned?: number;
+  status?: 'verified' | 'flagged' | 'rejected';
 }
 
 export const RewardModal: React.FC<RewardModalProps> = ({ 

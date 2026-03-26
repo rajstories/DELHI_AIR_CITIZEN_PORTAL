@@ -31,7 +31,7 @@ interface MyReportsProps {
 }
 
 const MyReports: React.FC<MyReportsProps> = ({ onScanClick }) => {
-  const [reports, setReports] = useState<ReportData[]>([]);
+  const [reports, setReports] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [useLocalStorage, setUseLocalStorage] = useState(false);
   const citizenId = getCitizenId();

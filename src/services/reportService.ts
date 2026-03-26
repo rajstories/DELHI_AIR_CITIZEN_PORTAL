@@ -1,54 +1,9 @@
-/**
- * reportService.ts
- * Handles photo compression, Firebase Storage upload, and all RTDB writes.
- * Now includes localStorage fallback when Firebase is not configured.
- */
 import { recordReportSubmission } from '../utils/citizenUtils';
 import type { VerificationResult } from './verificationService';
 
-let warnedMissingStorageConfig = false;
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-export interface ReportPayload {
-  citizenId: string;
-  reportId: string;
-  timestamp: number;
-  status: string;
-  trustScore: number;
-  location: {
-    submittedLat: number | null;
-    submittedLng: number | null;
-    exifLat: number | null;
-    exifLng: number | null;
-    digiPin: string | null;
-    address: string;
-  };
-  photo: {
-    url: string;
-    hasExif: boolean;
-    cameraModel: string | null;
-    captureTime: string | null;
-  };
-  report: {
-    issueType: string;
-    description: string;
-    severity: string;
-  };
-  verification: VerificationResult['breakdown'];
-}
-
-export interface SaveReportResult {
-  wrotePaths: string[];
-  failedPaths: Array<{ path: string; reason: string }>;
-  persistedLocally: boolean;
-}
-
-// ─── Local Storage for Reports ────────────────────────────────────────────────
-
 const LOCAL_REPORTS_KEY = 'dgp_citizen_reports';
 
-function getLocalReports(citizenId: string): ReportPayload[] {
+function getLocalReports(citizenId: string): any[] {
   try {
     const key = `${LOCAL_REPORTS_KEY}_${citizenId}`;
     const raw = localStorage.getItem(key);
@@ -59,7 +14,7 @@ function getLocalReports(citizenId: string): ReportPayload[] {
   }
 }
 
-function saveLocalReport(citizenId: string, report: ReportPayload): void {
+function saveLocalReport(citizenId: string, report: any): void {
   try {
     const key = `${LOCAL_REPORTS_KEY}_${citizenId}`;
     const reports = getLocalReports(citizenId);
@@ -69,8 +24,6 @@ function saveLocalReport(citizenId: string, report: ReportPayload): void {
     console.warn('[reportService] Failed to save to localStorage:', e);
   }
 }
-
-// ─── Helper: Ward lookup ──────────────────────────────────────────────────────
 
 export function getWardFromLocation(lat: number | null, lng: number | null): string {
   if (lat === null || lng === null) return '000X';
@@ -110,12 +63,9 @@ export function getSeverityFromLevel(severity: string): string {
   return map[severity] ?? 'High';
 }
 
-// ─── Image Compression ───────────────────────────────────────────────────────
-
 async function compressImage(file: File, maxWidth = 1200, quality = 0.82): Promise<File> {
   const THRESHOLD = 500 * 1024;
   if (file.size <= THRESHOLD) return file;
-
   return new Promise((resolve) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
@@ -141,67 +91,45 @@ async function compressImage(file: File, maxWidth = 1200, quality = 0.82): Promi
   });
 }
 
-// ─── Photo Upload (Mock - returns placeholder) ───────────────────────────────
-
-export async function uploadPhoto(
-  file: File,
-  citizenId: string,
-  reportId: string,
-): Promise<string> {
+export async function uploadPhoto(file: File, citizenId: string, reportId: string): Promise<string> {
   try {
     const processedFile = await compressImage(file);
-    
     const { ref: storageRef, uploadBytes, getDownloadURL } = await import('firebase/storage');
     const { storage } = await import('./firebaseConfig');
-    
     const path = `reports/${citizenId}/${reportId}.jpg`;
     const fileRef = storageRef(storage, path);
-    
     await Promise.race([
       uploadBytes(fileRef, processedFile, { contentType: 'image/jpeg' }),
       new Promise((_, reject) => setTimeout(() => reject(new Error('Upload timeout')), 8000))
     ]);
-    
     const url = await getDownloadURL(fileRef);
     console.log('[reportService] ✅ Photo uploaded:', url);
     return url;
   } catch (err) {
-    console.warn('[reportService] ⚠️ Photo upload failed — using placeholder:', err);
+    console.warn('[reportService] ⚠️ Photo upload failed:', err);
     return `https://placeholder.com/pollution-${reportId}.jpg`;
   }
 }
 
-// ─── Save Report (with localStorage fallback) ────────────────────────────────
-
-export async function saveReport(
-  report: ReportPayload,
-  verification: VerificationResult,
-): Promise<SaveReportResult> {
+export async function saveReport(report: any, verification: VerificationResult): Promise<any> {
   const { reportId, citizenId } = report;
   const lat = report.location.submittedLat;
-  const lng = report.location.submittedLng;
-  
-  const result: SaveReportResult = {
-    wrotePaths: [],
-    failedPaths: [],
-    persistedLocally: false,
-  };
+  const result: any = { wrotePaths: [], failedPaths: [], persistedLocally: false };
 
-  // Create progress updates based on verification status
   const progressUpdates = [
     { time: report.timestamp, status: 'Submitted' },
     { time: report.timestamp + 100, status: 'Verifying...' },
     {
       time: report.timestamp + 200,
       status: verification.status === 'verified'
-        ? `✅ Verified — Sent to DPCC`
+        ? '✅ Verified — Sent to DPCC'
         : verification.status === 'flagged'
-        ? `⚠️ Flagged for manual review (Trust: ${verification.trustScore}/100)`
-        : `❌ Could not verify`,
+        ? '⚠️ Flagged for manual review'
+        : '❌ Could not verify',
     },
   ];
 
-  const reportData = {
+  const reportData: any = {
     reportId,
     status: report.status,
     trustScore: report.trustScore,
@@ -215,76 +143,47 @@ export async function saveReport(
     progressUpdates,
   };
 
-  // Try Firebase first, then localStorage fallback
   try {
-    const { database, ref, set } = await import('firebase/database');
-    const dbRef = ref(database, `citizen_reports/${citizenId}/${reportId}`);
+    const { getDatabase, ref, set } = await import('firebase/database');
+    const db = getDatabase();
+    const dbRef = ref(db, `citizen_reports/${citizenId}/${reportId}`);
     await set(dbRef, reportData);
     result.wrotePaths.push(`citizen_reports/${citizenId}/${reportId}`);
-    console.log('[reportService] ✅ Written to Firebase');
   } catch (err) {
     console.warn('[reportService] ⚠️ Firebase not available, saving locally:', err);
     saveLocalReport(citizenId, report);
     result.persistedLocally = true;
   }
 
-  // Try to write to pending_reports (optional, won't fail if missing Firebase)
   try {
-    const { database, ref, set } = await import('firebase/database');
-    const dbRef = ref(database, `pending_reports/${reportId}`);
-    await set(dbRef, {
-      ...report,
-      verification: {
-        ...report.verification,
-        trustScore: verification.trustScore,
-        status: verification.status,
-        details: verification.details,
-      },
-    });
-    result.wrotePaths.push(`pending_reports/${reportId}`);
-  } catch {
-    // Silent fail - pending_reports is optional
-  }
+    const { getDatabase, ref, set } = await import('firebase/database');
+    const db = getDatabase();
+    const dbRef = ref(db, `pending_reports/${reportId}`);
+    await set(dbRef, { ...report, verification: { trustScore: verification.trustScore, status: verification.status } });
+  } catch {}
 
-  // Try to write to active_alerts for verified reports
   if (verification.status === 'verified') {
     try {
-      const { database, ref, set } = await import('firebase/database');
-      const wardId = getWardFromLocation(lat, lng);
-      const dbRef = ref(database, `active_alerts/${reportId}`);
+      const { getDatabase, ref, set } = await import('firebase/database');
+      const db = getDatabase();
+      const wardId = getWardFromLocation(lat, report.location.submittedLng);
+      const dbRef = ref(db, `active_alerts/${reportId}`);
       await set(dbRef, {
-        sourceReportId: reportId,
-        citizenId,
-        wardId,
+        sourceReportId: reportId, citizenId, wardId,
         issueType: report.report.issueType,
         title: getAlertTitle(report.report.issueType),
         description: report.report.description,
         photoUrl: report.photo.url,
-        location: {
-          lat,
-          lng,
-          address: report.location.address,
-          digiPin: report.location.digiPin,
-        },
+        location: { lat, lng: report.location.submittedLng, address: report.location.address, digiPin: report.location.digiPin },
         severity: getSeverityFromLevel(report.report.severity),
         trustScore: verification.trustScore,
-        citizenTrustBreakdown: verification.breakdown,
-        timestamp: report.timestamp,
-        status: 'open',
-        isFromCitizen: true,
-        governmentResponse: null,
-        resolvedAt: null,
+        timestamp: report.timestamp, status: 'open', isFromCitizen: true,
+        governmentResponse: null, resolvedAt: null,
       });
-      result.wrotePaths.push(`active_alerts/${reportId}`);
-    } catch {
-      // Silent fail - active_alerts is optional
-    }
+    } catch {}
   }
 
-  // Rate-limit tracking
   recordReportSubmission(citizenId);
-  
-  console.log(`[reportService] Report ${reportId} saved: Firebase=${result.wrotePaths.length}, Local=${result.persistedLocally}`);
   return result;
 }
 
