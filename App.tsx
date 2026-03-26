@@ -87,9 +87,6 @@ const AppContent: React.FC = () => {
         return <History />;
       case 'myreports':
         return <MyReports onScanClick={() => setShowCamera(true)} />;
-      case 'leaderboard':
-        // Pass dynamic points here
-        return <WardRakshak userPoints={userPoints} />;
       default:
         return <Home currentLocation={currentLocation} onViewActions={handleViewActions} userPoints={userPoints} />;
     }

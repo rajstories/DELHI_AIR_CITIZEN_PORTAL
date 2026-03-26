@@ -25,7 +25,7 @@ import { decodeDigiPin, isValidDigiPin } from './digiPinService';
 export interface VerificationBreakdown {
   gpsScore: number;        // 0-30
   digiPinScore: number;    // 0-40
-  exifScore: number;       // 0-20
+  exifScore: number;       // 0-30
   rateLimitScore: number;  // 0-10
   imageScore: number;      // 0 or -20
 }
@@ -58,6 +58,7 @@ interface VerifyReportParams {
   submittedLng: number;
   digiPin: string | null;
   citizenId: string;
+  isLiveCapture: boolean;
 }
 
 // ─── Haversine distance ────────────────────────────────────────────────────────
@@ -123,7 +124,7 @@ export function recordReportSubmission(citizenId: string): void {
  * Call this BEFORE writing to Firebase so you know the trust status upfront.
  */
 export async function verifyReport(params: VerifyReportParams): Promise<VerificationResult> {
-  const { file, submittedLat, submittedLng, digiPin, citizenId } = params;
+  const { file, submittedLat, submittedLng, digiPin, citizenId, isLiveCapture } = params;
 
   console.log('[verifyReport] Starting verification for citizenId:', citizenId);
   console.log('[verifyReport] Submitted GPS:', submittedLat, submittedLng);
@@ -196,13 +197,20 @@ export async function verifyReport(params: VerifyReportParams): Promise<Verifica
     }
   }
 
-  // ── CHECK 3 — EXIF quality (0-20 pts) ────────────────────────────────────────
-  if (!exifData.hasExif) {
+  // ── CHECK 3 — EXIF quality & Live Capture (0-30 pts) ─────────────────────────
+  // CRITICAL: If isLiveCapture is false, ALWAYS reject
+  if (!isLiveCapture) {
     breakdown.exifScore = 0;
-    console.log('[verifyReport] CHECK 3 — No EXIF at all. Score: 0');
+    details.rejectionReason = 'gallery_not_allowed';
+    breakdown.imageScore = -20; // Additional penalty for attempting gallery upload
+    console.log('[verifyReport] ⛔ CHECK 3 — NOT a live capture (Gallery/uploaded photo detected). REJECTED.');
+    console.log('[verifyReport]    Reason: Only real-time camera photos are accepted for authenticity verification.');
+  } else if (!exifData.hasExif) {
+    breakdown.exifScore = 10; // +10 for live capture confirming it's not from gallery
+    console.log('[verifyReport] CHECK 3 — Live capture confirmed but no EXIF metadata. Score: 10');
   } else {
     details.hasRealExif = true;
-    let score = 0;
+    let score = 10; // +10 base for live capture
 
     if (exifData.cameraModel) {
       score += 10;
@@ -265,7 +273,14 @@ export async function verifyReport(params: VerifyReportParams): Promise<Verifica
   );
 
   let status: VerificationResult['status'];
-  if (trustScore >= 70) {
+  
+  // CRITICAL: isLiveCapture MUST be true AND score >= 70 to verify
+  if (!isLiveCapture) {
+    // Gallery photos are ALWAYS rejected — no exceptions
+    status = 'rejected';
+    details.rejectionReason = 'gallery_not_allowed';
+    console.log('[verifyReport] ⛔ CRITICAL: Gallery/non-live photo detected. REJECTING regardless of other scores.');
+  } else if (trustScore >= 70) {
     status = 'verified';
   } else if (trustScore >= 40) {
     status = 'flagged';
@@ -287,7 +302,7 @@ export async function verifyReport(params: VerifyReportParams): Promise<Verifica
   console.log('[verifyReport] ─── RESULT ───────────────────────────');
   console.log(`[verifyReport]   GPS:      ${breakdown.gpsScore}/30`);
   console.log(`[verifyReport]   DigiPin:  ${breakdown.digiPinScore}/40`);
-  console.log(`[verifyReport]   EXIF:     ${breakdown.exifScore}/20`);
+  console.log(`[verifyReport]   EXIF:     ${breakdown.exifScore}/30`);
   console.log(`[verifyReport]   RateLimit: ${breakdown.rateLimitScore}/10`);
   console.log(`[verifyReport]   Image:    ${breakdown.imageScore}`);
   console.log(`[verifyReport]   TOTAL:    ${trustScore}/100 → ${status.toUpperCase()}`);

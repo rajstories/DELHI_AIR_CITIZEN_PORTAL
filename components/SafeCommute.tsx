@@ -1,9 +1,16 @@
 import React from 'react';
-import { MapPin, Navigation, Leaf, Clock, Cigarette, AlertTriangle } from 'lucide-react';
+import { MapPin, Navigation, Leaf, Clock, Cigarette, AlertTriangle, ExternalLink } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 export const SafeCommute: React.FC = () => {
   const { t } = useLanguage();
+
+  const openGoogleMaps = () => {
+    const startLocation = "Rohini Sec 13, Delhi";
+    const endLocation = "Connaught Place, Delhi";
+    const mapsUrl = `https://www.google.com/maps/dir/${encodeURIComponent(startLocation)}/${encodeURIComponent(endLocation)}`;
+    window.open(mapsUrl, '_blank');
+  };
 
   return (
     <div className="px-1 mt-2">
@@ -97,6 +104,16 @@ export const SafeCommute: React.FC = () => {
                          <span>{t('commute.green.zone')}</span>
                     </div>
                 </div>
+
+                {/* Google Maps Button */}
+                <button
+                  onClick={openGoogleMaps}
+                  className="mt-3 w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-3 rounded-lg flex items-center justify-center gap-2 transition-colors"
+                >
+                  <MapPin size={16} />
+                  <span>Open in Google Maps</span>
+                  <ExternalLink size={14} />
+                </button>
             </div>
 
         </div>

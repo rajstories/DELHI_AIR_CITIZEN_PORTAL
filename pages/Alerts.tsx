@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { AlertFilter, Alert } from '../types';
 import { MOCK_ALERTS } from '../constants';
-import { Bell, AlertTriangle, CheckCircle, Info, Settings, X, ArrowRight, Trash2 } from 'lucide-react';
+import { Bell, AlertTriangle, CheckCircle, Info, Settings, X, ArrowRight, Trash2, Award, TrendingUp } from 'lucide-react';
 import { Card } from '../components/Card';
 import { SuperAlertCard } from '../components/SuperAlertCard';
 import { GreenLensCamera } from '../components/GreenLensCamera';
@@ -16,6 +16,13 @@ export const Alerts: React.FC = () => {
   // Camera State for the Super Card
   const [showCamera, setShowCamera] = useState(false);
   const [showReward, setShowReward] = useState(false);
+
+  // Government Action Notifications
+  const [govtActions] = useState([
+    { id: '1', reportId: 'RPT-001', title: 'Your report on vehicle pollution', action: '✓ Traffic patrol dispatched', time: '1h ago', status: 'completed', points: 15 },
+    { id: '2', reportId: 'RPT-002', title: 'Report on construction dust', action: '⏳ Under review by DPCC', time: '3h ago', status: 'in-progress', points: 0 },
+    { id: '3', reportId: 'RPT-003', title: 'Smoke emission from factory', action: '✓ Warning issued to facility', time: '1d ago', status: 'completed', points: 25 },
+  ]);
 
   // Settings Form State
   const [settings, setSettings] = useState({
@@ -83,6 +90,40 @@ export const Alerts: React.FC = () => {
 
        {/* ALERTS LIST */}
        <div className="p-4 space-y-4 min-h-[50vh]">
+           {/* Government Action Notifications Section */}
+           {(filter === 'all' || filter === 'info') && govtActions.length > 0 && (
+               <div className="space-y-2 mb-6">
+                   <h2 className="text-xs font-bold text-gray-600 uppercase tracking-wider px-2">Government Action Updates</h2>
+                   {govtActions.map(action => (
+                       <div key={action.id} className={`rounded-lg p-4 border-2 flex items-start gap-4 transform transition-all hover:scale-[1.02] cursor-pointer shadow-sm ${
+                           action.status === 'completed' 
+                               ? 'bg-green-50 border-green-200' 
+                               : 'bg-blue-50 border-blue-200'
+                       }`}>
+                           <div className={`rounded-full p-2.5 flex-shrink-0 ${
+                               action.status === 'completed' 
+                                   ? 'bg-green-200 text-green-700' 
+                                   : 'bg-blue-200 text-blue-700 animate-pulse'
+                           }`}>
+                               <CheckCircle size={20} />
+                           </div>
+                           <div className="flex-1 min-w-0">
+                               <p className="text-sm font-bold text-gray-900">{action.title}</p>
+                               <p className="text-xs text-gray-600 mt-1">{action.action}</p>
+                               <div className="flex items-center justify-between mt-2">
+                                   <span className="text-[11px] text-gray-500">{action.time}</span>
+                                   {action.points > 0 && (
+                                       <span className="inline-flex items-center gap-1 bg-yellow-100 text-yellow-700 text-[10px] font-bold px-2 py-1 rounded-full">
+                                           <Award size={12} /> +{action.points} pts
+                                       </span>
+                                   )}
+                               </div>
+                           </div>
+                       </div>
+                   ))}
+               </div>
+           )}
+
            {/* Render SUPER CARD for Critical Alerts (Demo Data) */}
            {(filter === 'all' || filter === 'critical') && (
                <SuperAlertCard 

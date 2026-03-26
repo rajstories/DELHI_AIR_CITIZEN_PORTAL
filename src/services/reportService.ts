@@ -13,6 +13,8 @@ import { ref, set } from 'firebase/database';
 import { recordReportSubmission } from '../utils/citizenUtils';
 import type { VerificationResult } from './verificationService';
 
+let warnedMissingStorageConfig = false;
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface ReportPayload {
@@ -41,6 +43,12 @@ export interface ReportPayload {
     severity: string;
   };
   verification: VerificationResult['breakdown'];
+}
+
+export interface SaveReportResult {
+  wrotePaths: string[];
+  failedPaths: Array<{ path: string; reason: string }>;
+  persistedLocally: boolean;
 }
 
 // ─── Helper: Ward lookup ──────────────────────────────────────────────────────
@@ -163,6 +171,16 @@ export async function uploadPhoto(
   reportId: string,
 ): Promise<string> {
   try {
+    // Storage upload requires proper Firebase web config. If missing in local env,
+    // skip upload and continue report submission to avoid blocking citizens.
+    if (!import.meta.env.VITE_FIREBASE_API_KEY) {
+      if (!warnedMissingStorageConfig) {
+        console.warn('[reportService] Missing VITE_FIREBASE_API_KEY. Skipping Storage upload and continuing.');
+        warnedMissingStorageConfig = true;
+      }
+      return '';
+    }
+
     const processedFile = await compressImage(file);
 
     // Dynamic import — keeps the bundle lean and avoids crashing if storage
@@ -197,13 +215,32 @@ export async function uploadPhoto(
 export async function saveReport(
   report: ReportPayload,
   verification: VerificationResult,
-): Promise<void> {
+): Promise<SaveReportResult> {
   const { reportId, citizenId } = report;
   const lat = report.location.submittedLat;
   const lng = report.location.submittedLng;
+  const result: SaveReportResult = {
+    wrotePaths: [],
+    failedPaths: [],
+    persistedLocally: false,
+  };
+
+  const safeSet = async (path: string, payload: unknown): Promise<boolean> => {
+    try {
+      await set(ref(database, path), payload);
+      result.wrotePaths.push(path);
+      console.log(`[reportService] ✅ Written to /${path}`);
+      return true;
+    } catch (err) {
+      const reason = String((err as { code?: string; message?: string })?.code || (err as Error)?.message || err);
+      result.failedPaths.push({ path, reason });
+      console.warn(`[reportService] ⚠️ Write failed at /${path}:`, err);
+      return false;
+    }
+  };
 
   // 1. /pending_reports/{reportId} — full record for internal processing
-  await set(ref(database, `pending_reports/${reportId}`), {
+  await safeSet(`pending_reports/${reportId}`, {
     ...report,
     verification: {
       ...report.verification,
@@ -212,7 +249,6 @@ export async function saveReport(
       details:    verification.details,
     },
   });
-  console.log(`[reportService] ✅ Written to /pending_reports/${reportId}`);
 
   // 2. /citizen_reports/{citizenId}/{reportId} — what the citizen sees
   const progressUpdates = [
@@ -234,7 +270,7 @@ export async function saveReport(
     },
   ];
 
-  await set(ref(database, `citizen_reports/${citizenId}/${reportId}`), {
+  await safeSet(`citizen_reports/${citizenId}/${reportId}`, {
     reportId,
     status:      report.status,
     trustScore:  report.trustScore,
@@ -247,10 +283,9 @@ export async function saveReport(
     location:    report.location,
     progressUpdates,
   });
-  console.log(`[reportService] ✅ Written to /citizen_reports/${citizenId}/${reportId}`);
 
   // 3. /latest_alert — backward compat for govt portal polling
-  await set(ref(database, 'latest_alert'), {
+  await safeSet('latest_alert', {
     id:            reportId,
     type:          report.report.issueType,
     title:         getAlertTitle(report.report.issueType),
@@ -265,12 +300,11 @@ export async function saveReport(
     isNew:         true,
     isFromCitizen: true,
   });
-  console.log('[reportService] ✅ Written to /latest_alert');
 
   // 4. /active_alerts/{reportId} — government portal reads this
   if (verification.status === 'verified') {
     const wardId = getWardFromLocation(lat, lng);
-    await set(ref(database, `active_alerts/${reportId}`), {
+    await safeSet(`active_alerts/${reportId}`, {
       sourceReportId:     reportId,
       citizenId,
       wardId,
@@ -293,10 +327,25 @@ export async function saveReport(
       governmentResponse: null,
       resolvedAt:         null,
     });
-    console.log(`[reportService] ✅ Written to /active_alerts/${reportId} (ward: ${wardId})`);
+  }
+
+  // If every Firebase write failed (e.g., permission_denied), persist locally so
+  // the report isn't lost and the app can recover gracefully.
+  if (result.wrotePaths.length === 0) {
+    const localKey = `dgp_unsent_report_${reportId}`;
+    localStorage.setItem(localKey, JSON.stringify({
+      report,
+      verification,
+      queuedAt: Date.now(),
+    }));
+    result.persistedLocally = true;
+    console.warn(`[reportService] Stored unsent report locally at key: ${localKey}`);
   }
 
   // 5. Rate-limit tracking
   recordReportSubmission(citizenId);
-  console.log(`[reportService] Report ${reportId} fully saved. Status: ${verification.status}`);
+  console.log(
+    `[reportService] Report ${reportId} save summary: wrote=${result.wrotePaths.length}, failed=${result.failedPaths.length}, local=${result.persistedLocally}`,
+  );
+  return result;
 }

@@ -2,8 +2,34 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { AQIData, LocationData, Pollutant } from '../types';
 import { MOCK_AQI_DATA, LOCATIONS, getAQICategory, getHealthImpact } from '../constants';
 
-const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY || "";
+let ai: GoogleGenAI | null = null;
+if (apiKey) {
+  ai = new GoogleGenAI({ apiKey });
+}
 const CACHE_TTL = 30 * 60 * 1000; // Increase cache to 30 minutes for better speed
+const QUOTA_COOLDOWN_MS = 30 * 60 * 1000;
+const QUOTA_BLOCK_UNTIL_KEY = 'aqi_quota_block_until';
+const AQI_WARNED_KEY = 'aqi_warned_once';
+
+const warnOnce = (message: string): void => {
+  if (sessionStorage.getItem(AQI_WARNED_KEY)) return;
+  console.warn(message);
+  sessionStorage.setItem(AQI_WARNED_KEY, '1');
+};
+
+const isQuotaError = (error: unknown): boolean => {
+  const text = String(error ?? '').toLowerCase();
+  return text.includes('resource_exhausted') || text.includes('429') || text.includes('quota');
+};
+
+const getMockAqiData = (location: LocationData): AQIData => {
+  const mock = MOCK_AQI_DATA[location.id] || MOCK_AQI_DATA['1'];
+  return {
+    ...mock,
+    lastUpdated: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+  };
+};
 
 const getPollutantStatus = (val: number, type: 'pm25' | 'pm10' | 'no2' | 'so2'): Pollutant['status'] => {
   if (type === 'pm25') return val > 250 ? 'Critical' : val > 120 ? 'High' : val > 60 ? 'Moderate' : 'Low';
@@ -21,6 +47,14 @@ const getCacheKey = (location: LocationData): string => {
 
 export const fetchAQIData = async (location: LocationData, forceRefresh = false): Promise<AQIData> => {
   const cacheKey = getCacheKey(location);
+
+  // If quota was exhausted recently, skip network calls for a cooldown window.
+  const quotaBlockUntilRaw = localStorage.getItem(QUOTA_BLOCK_UNTIL_KEY);
+  const quotaBlockUntil = quotaBlockUntilRaw ? Number(quotaBlockUntilRaw) : 0;
+  if (quotaBlockUntil > Date.now()) {
+    warnOnce('[AQI Service] Gemini quota cooldown active. Serving fallback AQI data.');
+    return getMockAqiData(location);
+  }
 
   // 1. Check Cache
   if (!forceRefresh) {
@@ -52,6 +86,11 @@ export const fetchAQIData = async (location: LocationData, forceRefresh = false)
 
     const prompt = `Current AQI for ${locationQuery}. JSON only.
     Schema: { aqi: int, pm25: int, pm10: int, temp: int, humidity: int }`;
+    
+    if (!ai) {
+      warnOnce('[AQI Service] Missing VITE_GEMINI_API_KEY. Serving fallback AQI data.');
+      return getMockAqiData(location);
+    }
 
     // 3. Call Gemini with Search Grounding
     const response = await ai.models.generateContent({
@@ -110,13 +149,13 @@ export const fetchAQIData = async (location: LocationData, forceRefresh = false)
     return result;
 
   } catch (error) {
-    console.error("Error fetching real AQI data:", error);
-    // Fallback to mock data if API call fails
-    const mock = MOCK_AQI_DATA[location.id] || MOCK_AQI_DATA['1'];
-    return {
-        ...mock,
-        lastUpdated: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
-    };
+    if (isQuotaError(error)) {
+      localStorage.setItem(QUOTA_BLOCK_UNTIL_KEY, String(Date.now() + QUOTA_COOLDOWN_MS));
+      warnOnce('[AQI Service] Gemini API quota exhausted (429). Auto-fallback enabled for 30 minutes.');
+    } else {
+      console.warn('[AQI Service] Live AQI fetch failed, using fallback data:', error);
+    }
+    return getMockAqiData(location);
   }
 };
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, Bell, BarChart2, Trophy, Camera, ClipboardList } from 'lucide-react';
+import { Home, Bell, BarChart2, Camera, ClipboardList } from 'lucide-react';
 import { Page, NavItem } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import { ref, onValue } from 'firebase/database';
@@ -33,23 +33,10 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentPage, onNavigate, o
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] z-40 pb-safe">
-      <div className="max-w-[640px] mx-auto h-[72px] relative">
+      <div className="max-w-[640px] mx-auto h-[72px] relative flex items-center">
         
-        {/* Floating Button - Centered ABOVE the navbar */}
-        <div className="absolute left-1/2 -translate-x-1/2 -top-[4.5rem] z-20 flex flex-col items-center">
-            <button 
-                onClick={onScanClick}
-                className="w-[68px] h-[68px] rounded-full bg-gradient-to-tr from-green-600 to-yellow-400 shadow-[0_8px_20px_rgba(34,197,94,0.4)] flex items-center justify-center text-white border-[5px] border-white transition-transform hover:scale-105 active:scale-95"
-            >
-                <Camera size={30} />
-            </button>
-            <span className="text-[11px] font-extrabold tracking-wide text-green-800 whitespace-nowrap bg-white/95 backdrop-blur-sm px-3 py-1 rounded-full shadow-md mt-1 border border-green-100">
-                {t('nav.snap')}
-            </span>
-        </div>
-
-        {/* Navigation Grid - 5 evenly spaced items */}
-        <div className="grid grid-cols-5 h-full items-end pb-2 justify-items-center px-1">
+        {/* Navigation Grid - 5 items with camera perfectly centered */}
+        <div className="grid grid-cols-5 h-full w-full items-center justify-items-center px-1">
             <NavButton 
                 id="home" 
                 label={t('nav.home')} 
@@ -64,6 +51,20 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentPage, onNavigate, o
                 isActive={currentPage === 'alerts'} 
                 onClick={() => onNavigate('alerts')} 
             />
+            <button
+                onClick={onScanClick}
+                className="flex flex-col items-center justify-center space-y-0.5 transition-all duration-200 relative h-16 w-12 hover:scale-110"
+            >
+                <div className="relative flex items-center justify-center">
+                    <div className="absolute inset-0 bg-gradient-to-br from-green-400 to-green-600 rounded-full blur-sm opacity-80" style={{width: '52px', height: '52px'}}></div>
+                    <div className="relative w-12 h-12 bg-gradient-to-br from-green-500 to-green-700 rounded-full flex items-center justify-center text-white shadow-lg border-2 border-white">
+                        <Camera size={28} strokeWidth={1.5} />
+                    </div>
+                </div>
+                <span className="text-[9px] whitespace-nowrap font-extrabold text-green-700 tracking-tight">
+                    {t('nav.snap')}
+                </span>
+            </button>
             <NavButton 
                 id="myreports" 
                 label="Reports" 
@@ -79,13 +80,6 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentPage, onNavigate, o
                 isActive={currentPage === 'history'} 
                 onClick={() => onNavigate('history')} 
             />
-            <NavButton 
-                id="leaderboard" 
-                label="Ranking" 
-                icon={Trophy} 
-                isActive={currentPage === 'leaderboard'} 
-                onClick={() => onNavigate('leaderboard')} 
-            />
         </div>
       </div>
     </nav>
@@ -95,11 +89,11 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentPage, onNavigate, o
 const NavButton = ({ id, label, icon: Icon, isActive, onClick, badge }: any) => (
     <button
         onClick={onClick}
-        className={`flex flex-col items-center justify-center space-y-1 transition-colors duration-200 relative ${
+        className={`flex flex-col items-center justify-center space-y-0.5 transition-colors duration-200 relative h-16 w-12 ${
         isActive ? 'text-gov-navy' : 'text-gray-400 hover:text-gray-600'
         }`}
     >
-        <div className={`p-1 rounded-xl transition-all relative ${isActive ? 'bg-blue-50' : 'bg-transparent'}`}>
+        <div className={`p-1.5 rounded-lg transition-all relative ${isActive ? 'bg-blue-50' : 'bg-transparent'}`}>
             <Icon size={22} strokeWidth={isActive ? 2.5 : 2} />
             {badge && (
               <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white" />
