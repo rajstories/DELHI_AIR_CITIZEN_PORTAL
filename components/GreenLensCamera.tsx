@@ -17,7 +17,7 @@ import { getCitizenId } from '../src/utils/citizenUtils';
 
 interface GreenLensCameraProps {
   onClose: () => void;
-  onSubmit: (trustScore?: number) => void;
+  onSubmit: (trustScore?: number, status?: string) => void;
 }
 
 interface GpsCoords { lat: number; lng: number; }
@@ -381,9 +381,9 @@ export const GreenLensCamera: React.FC<GreenLensCameraProps> = ({ onClose, onSub
     }
   };
 
-  // Pass trustScore back to App.tsx so it can calculate points
+  // Pass trustScore and status back to App.tsx so it can calculate points
   const handleDoneFromResult = () => {
-    onSubmit(verificationResult?.trustScore);
+    onSubmit(verificationResult?.trustScore, verificationResult?.status);
   };
 
   const isFormValid = selectedType !== '' && selectedSeverity !== '' && hasSharedLocation;
