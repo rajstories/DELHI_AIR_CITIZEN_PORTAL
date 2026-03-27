@@ -29,6 +29,8 @@ const AppContent: React.FC = () => {
   const [showReward, setShowReward] = useState(false);
   const [userPoints, setUserPoints] = useState(1250); // Initial points
   const [lastTrustScore, setLastTrustScore] = useState<number | null>(null);
+  const [lastStatus, setLastStatus] = useState<'verified' | 'flagged' | 'rejected'>('rejected');
+  const [earnedPoints, setEarnedPoints] = useState(0);
 
   // Vayu Mitra Chat State
   const [showChat, setShowChat] = useState(false);
@@ -54,12 +56,22 @@ const AppContent: React.FC = () => {
     setCurrentPage('actions');
   };
 
-  const handleScanSubmit = (trustScore?: number) => {
+  const handleScanSubmit = (trustScore?: number, status?: string) => {
     setShowCamera(false);
-    // Award points scaled to trust score (demo: 50 base + bonus for high trust)
-    const bonus = trustScore !== undefined ? Math.floor(trustScore / 2) : 25;
-    setUserPoints(prev => prev + bonus);
+    
+    // Only award points if the report was VERIFIED by the backend
+    // PENDING_REVIEW and REJECTED reports do NOT earn points
+    const reportStatus = status as 'verified' | 'flagged' | 'rejected';
+    let pointsEarned = 0;
+    
+    if (reportStatus === 'verified' && trustScore !== undefined && trustScore > 0) {
+      pointsEarned = Math.floor(trustScore / 2);
+      setUserPoints(prev => prev + pointsEarned);
+    }
+    
     setLastTrustScore(trustScore ?? null);
+    setLastStatus(reportStatus || 'rejected');
+    setEarnedPoints(pointsEarned);
     setShowReward(true);
     // After a moment, navigate to My Reports so citizen can track their submission
     setTimeout(() => setCurrentPage('history'), 3500);
@@ -111,6 +123,8 @@ const AppContent: React.FC = () => {
                     onClose={() => setShowReward(false)} 
                     onRedeem={handleRedeem}
                     onScanAnother={handleScanAnother}
+                    pointsEarned={earnedPoints}
+                    status={lastStatus}
                 />
             )}
             {showChat && (
