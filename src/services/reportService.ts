@@ -301,28 +301,36 @@ export async function saveReport(
     isFromCitizen: true,
   });
 
-  // 4. /active_alerts/{reportId} — government portal reads this
+  // 4. /active_alerts — government portal reads this for actioning
   if (verification.status === 'verified') {
     const wardId = getWardFromLocation(lat, lng);
     await safeSet(`active_alerts/${reportId}`, {
+      // 🚨 REQUIRED BY SENIOR DEV (FLAT SCHEMA)
+      title:              getAlertTitle(report.report.issueType),
+      description:        report.report.description,
+      location:           report.location.address, // Flat string for map/list display
+      timestamp:          report.timestamp,
+      status:             'open',
+      
+      // Metadata
       sourceReportId:     reportId,
       citizenId,
       wardId,
       issueType:          report.report.issueType,
-      title:              getAlertTitle(report.report.issueType),
-      description:        report.report.description,
       photoUrl:           report.photo.url,
-      location: {
+      
+      // Structure Data for advanced map features
+      coords: {
         lat,
         lng,
-        address: report.location.address,
         digiPin: report.location.digiPin,
       },
+      
       severity:           getSeverityFromLevel(report.report.severity),
       trustScore:         verification.trustScore,
       citizenTrustBreakdown: verification.breakdown,
-      timestamp:          report.timestamp,
-      status:             'open',
+      
+      // Verification meta
       isFromCitizen:      true,
       governmentResponse: null,
       resolvedAt:         null,
